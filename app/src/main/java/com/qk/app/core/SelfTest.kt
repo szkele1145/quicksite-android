@@ -71,6 +71,20 @@ object SelfTest {
         // 6. frpc
         items += version(shell, "frpc", "\"\${'$'}PREFIX/bin/frpc\" -v", 20)
 
+        // 6a. frpc 配置校验（有配置才查，无配置不算失败）
+        val frpcConfFile = Paths.frpcConf(ctx)
+        if (frpcConfFile.exists()) {
+            val vr = shell.run("\"\${'$'}PREFIX/bin/frpc\" verify -c \"${frpcConfFile.absolutePath}\"", 30)
+            val out = vr.output.lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: ""
+            items += Item(
+                "frpc 配置",
+                vr.ok,
+                if (vr.ok) "校验通过" else "校验失败：" + (if (out.isNotBlank()) out.take(90) else "退出码 ${vr.exitCode}")
+            )
+        } else {
+            items += Item("frpc 配置", true, "未导入（可跳过）")
+        }
+
         // 7. 站点配置文件是否可生成
         val sites = Paths.nginxSites(ctx).listFiles { f -> f.name.endsWith(".conf") }?.size ?: 0
         items += Item("站点配置", sites > 0, if (sites > 0) "$sites 个站点" else "还没有站点（可到「网站」新建）")
