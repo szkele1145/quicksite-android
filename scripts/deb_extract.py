@@ -5,7 +5,21 @@ import sys, tarfile, io, os
 PREFIXES = (
     './data/data/com.termux/files/usr/',
     './data/data/com.termux/files/usr',
+    '/data/data/com.termux/files/usr/',
+    '/data/data/com.termux/files/usr',
+    'data/data/com.termux/files/usr/',
+    'data/data/com.termux/files/usr',
 )
+
+
+def norm(name):
+    """把 deb 内的各种前缀写法归一成「相对 usr 的路径」。"""
+    n = name
+    for p in PREFIXES:
+        if n.startswith(p):
+            n = n[len(p):]
+            break
+    return n.lstrip('/')
 
 
 def main(deb_path, out_root):
@@ -31,27 +45,44 @@ def main(deb_path, out_root):
     tf = tarfile.open(fileobj=io.BytesIO(data))
     count = 0
     extra_links = []
-    for m in tf.getmembers():
-        name = m.name
-        for p in PREFIXES:
-            if name.startswith(p):
-                name = name[len(p):]
-                break
-        name = name.lstrip('/')
+    members = tf.getmembers()
+
+    # 先建立「相对 usr 的路径 -> 内容」映射，供符号链接降级为实体副本时使用。
+    # 原因：deb 里的链接常指向 /data/data/com.termux/files/usr/... 这种绝对路径，
+    # 而运行时我们的前缀已经换成 com.qk.app，绝对路径会失效，所以能复制就复制。
+    files = {}
+    for m in members:
+        if not m.isfile():
+            continue
+        name = norm(m.name)
+        if name:
+            files[name] = tf.extractfile(m).read()
+
+    for m in members:
+        name = norm(m.name)
         if not name:
             continue
         dest = os.path.join(out_root, name)
         if m.isdir():
             os.makedirs(dest, exist_ok=True)
         elif m.issym():
+            target = norm(m.linkname)
+            if target in files:
+                os.makedirs(os.path.dirname(dest) or '.', exist_ok=True)
+                if os.path.lexists(dest):
+                    os.remove(dest)
+                with open(dest, 'wb') as w:
+                    w.write(files[target])
+                count += 1
+                continue
             try:
                 os.symlink(m.linkname, dest)
             except (OSError, NotImplementedError):
                 extra_links.append((m.linkname, name))
         elif m.isfile():
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            os.makedirs(os.path.dirname(dest) or '.', exist_ok=True)
             with open(dest, 'wb') as w:
-                w.write(tf.extractfile(m).read())
+                w.write(files[name])
             count += 1
     if extra_links:
         with open(os.path.join(out_root, 'SYMLINKS.extra.txt'), 'a') as f:

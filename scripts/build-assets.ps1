@@ -24,8 +24,7 @@ $prunes = @(
   'libexec\termux-am',
   'libexec\termux\command-not-found',
   'var\log',
-  'var\cache\apt',
-  'etc\apt'
+  'var\cache\apt'
 )
 foreach ($p in $prunes) {
   $t = Join-Path $bs $p
@@ -34,7 +33,7 @@ foreach ($p in $prunes) {
 # 不要裁掉 apt / gnutls / p11-kit / unbound / unistring 等库：
 # 它们被 lib/apt/* 与 libgnutls-dane.so 依赖，删掉会在 lib/ 留下依赖断裂的 .so
 # （scripts/elf_audit.py 会检查出来）。
-foreach ($l in @('pkcs11')) {
+foreach ($l in @()) {
   $t = Join-Path $bs "lib\$l"
   if (Test-Path $t) { Remove-Item $t -Recurse -Force }
 }
@@ -55,6 +54,18 @@ if (-not (Test-Path $shLink)) {
   Copy-Item (Join-Path $bs 'bin\dash') $shLink -Force
   Write-Output '  已补 bin/sh'
 }
+
+# 3.7 termux-keyring（apt 校验仓库签名必需；bootstrap 本身不带）
+$kr = Join-Path $dl 'termux-keyring.deb'
+if (Test-Path $kr) { & python (Join-Path $PSScriptRoot 'deb_extract.py') $kr $bs }
+
+# 3.8 清掉依赖 perl/python 的边角脚本（Android 上没有这两个解释器）
+foreach ($f in @('bin\lsns','bin\dpkg-buildtree','bin\dpkg-buildapi','bin\dpkg-fsys-usrunmess')) {
+  $x = Join-Path $bs $f
+  if (Test-Path $x) { Remove-Item $x -Force }
+}
+$samples = Join-Path $bs 'lib\node_modules\pm2\lib\templates\sample-apps'
+if (Test-Path $samples) { Remove-Item $samples -Recurse -Force }
 
 # 4. frpc
 & python (Join-Path $PSScriptRoot 'tar_extract.py') (Join-Path $dl 'frp-android-arm64.tar.gz') (Join-Path $out 'frpc.bin') frpc

@@ -159,6 +159,13 @@
                 <TextView style="@style/EntryTitle" android:text="日志" />
                 <TextView style="@style/EntrySub" android:text="nginx / frpc 运行日志" />
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/cardConsole"
+                style="@style/EntryCard">
+                <TextView style="@style/EntryTitle" android:text="命令行" />
+                <TextView style="@style/EntrySub" android:text="直接用 apt / node / nginx 等命令" />
+            </LinearLayout>
         </LinearLayout>
 
         <TextView

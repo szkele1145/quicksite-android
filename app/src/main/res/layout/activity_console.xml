@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="命令行"
+        android:textColor="@color/fg"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="预置的 termux 环境，可直接用 apt / node / nginx"
+        android:textColor="@color/fg_dim"
+        android:textSize="12sp" />
+
+    <ScrollView
+        android:id="@+id/consoleScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:background="@drawable/bg_card"
+        android:padding="10dp">
+
+        <TextView
+            android:id="@+id/tvConsole"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fontFamily="monospace"
+            android:textColor="@color/fg"
+            android:textSize="11sp"
+            android:textIsSelectable="true" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/etConsole"
+            style="@style/FieldInput"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:hint="apt update  /  node -v  /  ls bin"
+            android:imeOptions="actionGo"
+            android:inputType="textNoSuggestions"
+            android:singleLine="true" />
+
+        <Button
+            android:id="@+id/btnRun"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:backgroundTint="@color/accent"
+            android:text="运行"
+            android:textColor="@color/bg" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnHistoryUp"
+            style="@style/SmallBtn"
+            android:text="上一条" />
+
+        <Button
+            android:id="@+id/btnClear"
+            style="@style/SmallBtn"
+            android:text="清屏" />
+    </LinearLayout>
+</LinearLayout>

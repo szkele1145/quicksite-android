@@ -30,6 +30,10 @@
         <activity android:name=".ui.FrpcActivity" android:exported="false" />
         <activity android:name=".ui.LogActivity" android:exported="false" />
         <activity android:name=".ui.AppsActivity" android:exported="false" />
+        <activity
+            android:name=".ui.ConsoleActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".core.KeepAliveService"

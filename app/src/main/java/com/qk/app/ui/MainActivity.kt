@@ -68,6 +68,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.cardLogs).setOnClickListener {
             startActivity(Intent(this, LogActivity::class.java))
         }
+        findViewById<View>(R.id.cardConsole).setOnClickListener {
+            startActivity(Intent(this, ConsoleActivity::class.java))
+        }
 
         // 长按状态卡片 → 跑一次环境自检（真机上最直接的诊断入口）
         findViewById<View>(R.id.statusCard).setOnLongClickListener {

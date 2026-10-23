@@ -268,6 +268,10 @@ object EnvInstaller {
         listOf("client-body", "proxy", "fastcgi", "scgi", "uwsgi").forEach {
             File(usr, "var/lib/nginx/$it").mkdirs()
         }
+        // apt 的可写目录（控制台里 apt update / install 依赖它们）
+        listOf("var/lib/apt/lists/partial", "var/cache/apt/archives/partial", "var/log/apt").forEach {
+            File(usr, it).mkdirs()
+        }
 
         // 首次安装自动建一个默认站点，保证「一键启动」后立刻有页面可看
         seedDefaultSite(ctx)
