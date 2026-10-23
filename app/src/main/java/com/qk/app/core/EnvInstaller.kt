@@ -223,7 +223,7 @@ object EnvInstaller {
             ctx.assets.open(FRPC_ASSET).use { input ->
                 out.outputStream().use { input.copyTo(it, 128 * 1024) }
             }
-            out.setExecutable(true, false)
+            OsChmod.chmod(out.absolutePath, 0x1ED) // 0755
         } catch (e: Exception) {
             Paths.log("EnvInstaller", "frpc 安装失败: ${e.message}")
         }
