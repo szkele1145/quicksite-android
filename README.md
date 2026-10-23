@@ -35,7 +35,26 @@ Node 应用：**「Node 应用」** → 填入口脚本 → pm2 托管。
 | **网站** | 静态站点 / 反向代理两种类型，端口自动分配，保存即热重载 |
 | **frpc** | 一键导入 `toml` / 旧版 `ini` 配置，自动转换 + 规范化 + 冲突检查 |
 | **Node 应用** | 内置 Node.js + npm + pm2，托管 node 项目（启动 / 停止 / 看日志） |
+| **命令行** | 直接开放预置的 termux shell，可跑 `apt` / `node` / `nginx` 等命令 |
 | **日志** | nginx access/error + frpc 日志汇总，可一键清空 |
+| **环境自检** | 长按首页状态卡片，逐项验证 bash/基础命令/nginx/node/pm2/frpc |
+
+### 命令行能做什么
+
+首页「命令行」给的是一个真实的 termux shell，PREFIX 已就绪：
+
+```bash
+apt update && apt install python git      # 从 termux 仓库装包
+npm i -g serve && serve -s /var/www       # 装全局 npm 包
+nginx -t -p $PREFIX -c $PREFIX/etc/nginx/nginx.conf   # 检查配置
+ls -l $PREFIX/bin                          # 看都有什么命令
+```
+
+`apt` 之所以真的能用，是因为两件事都做了：
+
+1. bootstrap 只带了 `sources.list`，**没有 GPG 密钥环** —— 补了 `termux-keyring`
+2. deb 里的符号链接指向 `/data/data/com.termux/files/usr/...` 绝对路径，
+   运行时前缀换成 `com.qk.app` 后会全部失效 —— 解包器把这类链接降级成实体文件
 
 ---
 
