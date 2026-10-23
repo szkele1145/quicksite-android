@@ -13,8 +13,8 @@ android {
         // targetSdk = 28：低于 29 才享有 Android 10+ 的「数据目录可执行」豁免（W^X），
         // 同时 >= 24 满足 Android 15/16 的最低安装 targetSdk 门槛 → 覆盖 Android 7~16。
         targetSdk = 28
-        versionCode = 7
-        versionName = "1.1.5"
+        versionCode = 8
+        versionName = "1.1.8"
         ndk {
             // 只带 arm64：termux bootstrap 与 frpc 均为 aarch64
             abiFilters += listOf("arm64-v8a")
