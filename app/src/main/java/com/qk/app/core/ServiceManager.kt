@@ -100,8 +100,10 @@ class ServiceManager(private val ctx: Context) {
         val log = File(Paths.logDir(ctx), "frpc.log")
         log.delete()
         val prefix = Paths.usr(ctx).absolutePath
+        // frpc 的 -l 是日志级别（trace/info/warn/error/debug），不是日志文件。
+        // 日志文件由 startDetached 的 logFile 参数通过 stderr/stdout 重定向捕获。
         val p = shell.startDetached(
-            "\"$prefix/bin/frpc\" -c \"${conf.absolutePath}\" -l \"${log.absolutePath}\"",
+            "\"$prefix/bin/frpc\" -c \"${conf.absolutePath}\"",
             logFile = log
         )
         if (p == null) return Shell.Result(-1, "frpc 启动失败")
