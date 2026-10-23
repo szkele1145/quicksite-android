@@ -1,0 +1,19 @@
+# 构建产物
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+.cxx/
+
+# assets 构建中间产物（bootstrap.zip / frpc.bin 由 CI 重新拉取生成）
+assets-work/
+app/src/main/assets/bootstrap.zip
+app/src/main/assets/frpc.bin
+
+# 不提交大二进制：bootstrap 与 frp 由 CI 下载
+dl/
+
+# 系统文件
+.DS_Store
+Thumbs.db

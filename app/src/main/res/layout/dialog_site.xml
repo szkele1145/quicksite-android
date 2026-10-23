@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView style="@style/FieldLabel" android:text="站点名（英文/数字/横线）" />
+
+        <EditText
+            android:id="@+id/etSiteName"
+            style="@style/FieldInput"
+            android:hint="my-site"
+            android:inputType="text" />
+
+        <TextView style="@style/FieldLabel" android:text="监听端口" />
+
+        <EditText
+            android:id="@+id/etSitePort"
+            style="@style/FieldInput"
+            android:hint="8080"
+            android:inputType="number" />
+
+        <TextView style="@style/FieldLabel" android:text="类型" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/tgSiteType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp">
+
+            <Button
+                android:id="@+id/btnTypeStatic"
+                style="@style/ToggleBtn"
+                android:text="静态网站" />
+
+            <Button
+                android:id="@+id/btnTypeProxy"
+                style="@style/ToggleBtn"
+                android:text="反向代理" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <TextView style="@style/FieldLabel" android:text="站点根目录（静态）" />
+
+        <EditText
+            android:id="@+id/etSiteRoot"
+            style="@style/FieldInput"
+            android:hint="var/www/my-site"
+            android:inputType="text" />
+
+        <TextView style="@style/FieldLabel" android:text="代理目标（反代，如 http://127.0.0.1:3000）" />
+
+        <EditText
+            android:id="@+id/etSiteProxy"
+            style="@style/FieldInput"
+            android:hint="http://127.0.0.1:3000"
+            android:inputType="textUri"
+            android:visibility="gone" />
+
+        <TextView style="@style/FieldLabel" android:text="域名（可选）" />
+
+        <EditText
+            android:id="@+id/etServerName"
+            style="@style/FieldInput"
+            android:hint="localhost"
+            android:inputType="textUri" />
+    </LinearLayout>
+</ScrollView>

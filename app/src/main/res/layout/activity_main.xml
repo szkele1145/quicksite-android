@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="QuickSite"
+            android:textColor="@color/fg"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="手机秒开 Web 站 · nginx / pm2 / frpc"
+            android:textColor="@color/fg_dim"
+            android:textSize="13sp" />
+
+        <!-- 安装卡片（首次显示） -->
+        <LinearLayout
+            android:id="@+id/installCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="首次使用"
+                android:textColor="@color/accent"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="需要解包内置的运行环境（约 40MB，仅需一次）"
+                android:textColor="@color/fg_dim"
+                android:textSize="13sp" />
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/btnInstall"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:backgroundTint="@color/accent"
+                android:text="安装运行环境"
+                android:textColor="@color/bg" />
+        </LinearLayout>
+
+        <!-- 状态 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_card"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="状态加载中…"
+                android:textColor="@color/fg"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/infoText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/fg_dim"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnStart"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/accent2"
+                    android:text="一键启动"
+                    android:textColor="@color/bg" />
+
+                <Button
+                    android:id="@+id/btnStop"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/danger"
+                    android:text="全部停止"
+                    android:textColor="@color/fg" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 功能入口 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/cardSites"
+                style="@style/EntryCard">
+                <TextView style="@style/EntryTitle" android:text="网站" />
+                <TextView style="@style/EntrySub" android:text="新建静态站点或反向代理" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/cardFrpc"
+                style="@style/EntryCard">
+                <TextView style="@style/EntryTitle" android:text="frpc 内网穿透" />
+                <TextView style="@style/EntrySub" android:text="一键导入配置文件（toml / ini）" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/cardApps"
+                style="@style/EntryCard">
+                <TextView style="@style/EntryTitle" android:text="Node 应用" />
+                <TextView style="@style/EntrySub" android:text="用 pm2 托管 node 项目" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/cardLogs"
+                style="@style/EntryCard">
+                <TextView style="@style/EntryTitle" android:text="日志" />
+                <TextView style="@style/EntrySub" android:text="nginx / frpc 运行日志" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="12dp"
+            android:text="QuickSite v1.0 · arm64"
+            android:textColor="@color/fg_dim"
+            android:textSize="11sp" />
+    </LinearLayout>
+</ScrollView>

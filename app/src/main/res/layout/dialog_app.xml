@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView style="@style/FieldLabel" android:text="应用名（pm2 进程名）" />
+
+        <EditText
+            android:id="@+id/etAppName"
+            style="@style/FieldInput"
+            android:hint="my-api"
+            android:inputType="text" />
+
+        <TextView style="@style/FieldLabel" android:text="入口脚本（相对 projects 目录）" />
+
+        <EditText
+            android:id="@+id/etAppScript"
+            style="@style/FieldInput"
+            android:hint="server.js"
+            android:inputType="text" />
+
+        <TextView style="@style/FieldLabel" android:text="启动参数（可选）" />
+
+        <EditText
+            android:id="@+id/etAppArgs"
+            style="@style/FieldInput"
+            android:hint="--port 3000"
+            android:inputType="text" />
+    </LinearLayout>
+</ScrollView>

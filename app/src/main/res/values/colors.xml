@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0F172A</color>
+    <color name="bg_card">#1E293B</color>
+    <color name="bg_card2">#263449</color>
+    <color name="fg">#E2E8F0</color>
+    <color name="fg_dim">#94A3B8</color>
+    <color name="accent">#38BDF8</color>
+    <color name="accent2">#22C55E</color>
+    <color name="warn">#F59E0B</color>
+    <color name="danger">#EF4444</color>
+</resources>
