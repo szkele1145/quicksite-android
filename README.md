@@ -235,5 +235,25 @@ remote_port = 8080
 ## 已知限制
 
 - 仅 **arm64-v8a**（现代安卓手机通用；老设备需另出 armeabi-v7a 包）
-- 未预置 pm2 / nodejs 运行时，需要 Node 功能时目前只走 termux 官方源安装
 - frpc 为官方静态编译版，无 `com.termux` 前缀依赖，可直接执行
+
+### 已发布包（v1.1.4）里的残留
+
+构建 v1.1.4 的 assets 时，`libgnutls` / `libapt-*` 还被裁掉，因此包内
+`lib/apt/*` 与 `lib/libgnutls-dane.so` 是**依赖断裂**的：
+
+- `apt-get` / `apt` 等命令无法运行（本应用用不到——nginx 是构建期预置的）
+- 不影响主路径：`bash`、coreutils、`nginx`、`node`、`npm`、`pm2`、`frpc` 全部正常
+
+构建脚本已修正，下次重新跑 `scripts/build-assets.ps1` 打出的包即为完整依赖。
+
+### 尚未在真机验证
+
+结构层面已通过 `scripts/elf_audit.py` 证明运行时自洽（依赖闭包完整、
+架构统一、interp/RUNPATH 正确），但以下两点只能装机确认：
+
+1. Android linker 是否真的允许从 app data dir 执行（依赖 targetSdk=28 的
+   sepolicy 豁免，已按 AOSP 源码核实规则存在，但未实测）
+2. nginx 首次启动时的目录创建与权限行为
+
+装机后长按首页「状态」卡片可跑自检，直接定位问题层。
