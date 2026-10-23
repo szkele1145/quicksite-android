@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.qk.app.core.AppConfig
 import com.qk.app.core.EnvInstaller
 import com.qk.app.core.Paths
+import com.qk.app.core.SelfTest
 import com.qk.app.core.ServiceManager
 import com.qk.app.core.Shell
 import kotlinx.coroutines.Dispatchers
@@ -68,8 +69,43 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LogActivity::class.java))
         }
 
+        // 长按状态卡片 → 跑一次环境自检（真机上最直接的诊断入口）
+        findViewById<View>(R.id.statusCard).setOnLongClickListener {
+            runSelfTest()
+            true
+        }
+
         refreshState()
     }
+
+    /** 跑环境自检并弹窗展示结果。 */
+    private fun runSelfTest() {
+        if (!Paths.isInstalled(this)) {
+            statusText.text = "环境未安装，先点上面的「安装运行环境」"
+            return
+        }
+        statusText.text = "自检中…"
+        lifecycleScope.launch {
+            val report = withContext(Dispatchers.IO) { SelfTest.run(this@MainActivity) }
+            statusText.text = "自检：${report.summary()}"
+            androidx.appcompat.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("环境自检")
+                .setMessage(SelfTest.format(report))
+                .setPositiveButton("知道了", null)
+                .setNeutralButton("复制") { _, _ ->
+                    val cm = getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+                    cm.setPrimaryClip(
+                        android.content.ClipData.newPlainText("QuickSite 自检", SelfTest.format(report))
+                    )
+                    toast("已复制，可直接粘贴反馈")
+                }
+                .show()
+        }
+    }
+
+    private fun toast(msg: String) =
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_SHORT).show()
 
     override fun onResume() {
         super.onResume()
@@ -150,10 +186,11 @@ class MainActivity : AppCompatActivity() {
             progressBar.visibility = View.GONE
             btnInstall.isEnabled = true
             if (ok) {
-                statusText.text = "环境安装完成"
+                statusText.text = "环境安装完成，正在自检…"
                 refreshState()
+                runSelfTest()
             } else {
-                statusText.text = "环境安装失败，请查看日志"
+                statusText.text = "环境安装失败，请查看日志（长按状态卡片可重试自检）"
             }
         }
     }

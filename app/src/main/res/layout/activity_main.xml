@@ -72,8 +72,9 @@
                 android:textColor="@color/bg" />
         </LinearLayout>
 
-        <!-- 状态 -->
+        <!-- 状态（长按可跑环境自检） -->
         <LinearLayout
+            android:id="@+id/statusCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"

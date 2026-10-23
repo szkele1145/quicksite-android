@@ -54,7 +54,9 @@ object PrefixPatcher {
 
     /**
      * 大文件：按窗口分块扫描替换，内存占用恒定。
-     * 窗口之间保留 needle.size-1 字节重叠，保证跨窗口边界的匹配也能命中。
+     *
+     * 每次多读 `overlap` 字节作为前瞻，并把「主体 + 前瞻」整体写回，
+     * 这样跨窗口边界的匹配也能被完整替换（只写主体会留下半截替换串）。
      */
     private fun patchLarge(file: File): Boolean {
         val needle = TERMUX_BYTES
@@ -67,31 +69,28 @@ object PrefixPatcher {
             val len = raf.length()
             var pos = 0L
             while (pos < len) {
-                val readLen = minOf(window.toLong(), len - pos).toInt()
-                val tail = if (pos + readLen < len) {
-                    minOf(overlap.toLong(), len - (pos + readLen)).toInt()
-                } else 0
-                val buf = ByteArray(readLen + tail)
+                val mainLen = minOf(window.toLong(), len - pos).toInt()
+                val lookahead = minOf(overlap.toLong(), len - (pos + mainLen)).toInt()
+                val total = mainLen + lookahead
+                val buf = ByteArray(total)
                 raf.seek(pos)
-                raf.readFully(buf, 0, readLen + tail)
+                raf.readFully(buf, 0, total)
 
+                // 替换所有完整包含在本缓冲内的匹配
                 var idx = indexOf(buf, needle, 0)
                 var localChanged = false
                 while (idx >= 0) {
-                    // 只替换起始位置落在本窗口主体内的匹配
-                    if (idx < readLen) {
-                        System.arraycopy(repl, 0, buf, idx, repl.size)
-                        localChanged = true
-                    }
+                    System.arraycopy(repl, 0, buf, idx, repl.size)
+                    localChanged = true
                     idx = indexOf(buf, needle, idx + repl.size)
                 }
                 if (localChanged) {
                     raf.seek(pos)
-                    raf.write(buf, 0, readLen)
+                    raf.write(buf, 0, total)
                     changed = true
                 }
-                if (readLen <= overlap) break
-                pos += (readLen - overlap).toLong()
+                // 下一个窗口从主体之后开始；前瞻区已被写回，重复扫描是幂等的
+                pos += mainLen.toLong()
             }
         }
         return changed
@@ -147,6 +146,9 @@ object PrefixPatcher {
 
     /**
      * 边读边替换边写：滑动缓冲，保证跨块边界的匹配不丢失，内存占用恒定。
+     *
+     * 要点：尾部保留的 `keep` 字节必须取自**已替换后的 work**，不能取自原始 data。
+     * 否则跨边界的匹配会被重复处理成残缺串（`com.termux` → `c` + `om.termux`）。
      */
     private fun writePatched(input: InputStream, out: File) {
         val needle = TERMUX_BYTES
@@ -166,7 +168,6 @@ object PrefixPatcher {
                     continue
                 }
                 val processLen = data.size - keep
-                // 多处理 keep 字节以便发现跨界匹配，但只写出 processLen
                 val work = data.copyOf()
                 var idx = indexOf(work, needle, 0)
                 while (idx >= 0) {
@@ -174,7 +175,8 @@ object PrefixPatcher {
                     idx = indexOf(work, needle, idx + repl.size)
                 }
                 os.write(work, 0, processLen)
-                carry = data.copyOfRange(processLen, data.size)
+                // 关键：从 work 取尾巴（已替换），而不是 data
+                carry = work.copyOfRange(processLen, work.size)
             }
             if (carry.isNotEmpty()) {
                 var idx = indexOf(carry, needle, 0)
