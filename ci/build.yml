@@ -1,0 +1,120 @@
+name: Build APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '版本号，如 v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Android SDK
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/android-sdk
+            ~/.gradle/caches
+          key: android-sdk-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml', 'app/build.gradle.kts') }}
+
+      - name: Install Android SDK
+        run: |
+          SDK_ROOT="${{ runner.temp }}/android-sdk"
+          mkdir -p "$SDK_ROOT/cmdline-tools"
+          curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+          mv /tmp/cmdline-tools/cmdline-tools "$SDK_ROOT/cmdline-tools/latest"
+          export ANDROID_HOME="$SDK_ROOT"
+          export ANDROID_SDK_ROOT="$SDK_ROOT"
+          yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_HOME=$SDK_ROOT" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> $GITHUB_ENV
+
+      - name: Fetch termux bootstrap
+        run: |
+          mkdir -p dl
+          curl -fsSL -o dl/bootstrap-aarch64.zip \
+            "https://github.com/termux/termux-packages/releases/download/bootstrap-2026.10.18-r1%2Bapt.android-7/bootstrap-aarch64.zip"
+          unzip -q dl/bootstrap-aarch64.zip -d dl/bs
+
+      - name: Fetch frp (android arm64)
+        run: |
+          curl -fsSL -o dl/frp-android-arm64.tar.gz \
+            "https://github.com/fatedier/frp/releases/download/v0.71.1/frp_0.71.1_android_arm64.tar.gz"
+
+      - name: Fetch nginx deb
+        run: |
+          curl -fsSL -o dl/nginx_1.31.8_aarch64.deb \
+            "https://packages.termux.dev/apt/termux-main/pool/main/n/nginx/nginx_1.31.8_aarch64.deb"
+
+      - name: Build assets
+        run: |
+          chmod +x scripts/build-assets.sh
+          ./scripts/build-assets.sh
+
+      - name: Generate icons
+        run: python3 scripts/gen-icon.py app/src/main/res
+
+      - name: Create keystore
+        run: |
+          mkdir -p keystore
+          keytool -genkeypair -v -keystore keystore/quicksite.keystore \
+            -alias quicksite -keyalg RSA -keysize 2048 -validity 10950 \
+            -storepass quicksite2026 -keypass quicksite2026 \
+            -dname "CN=QuickSite, OU=QuickSite, O=QuickSite, L=SH, ST=SH, C=CN"
+
+      - name: Build release APK
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon
+          ls -la app/build/outputs/apk/release/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuickSite-release
+          path: app/build/outputs/apk/release/*.apk
+
+      - name: Publish Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+          body: |
+            ## QuickSite ${{ github.ref_name }}
+
+            安卓秒开网站工具，内置 nginx / pm2 / frpc。
+
+            - 架构：arm64-v8a
+            - 最低系统：Android 7.0（API 24）
+            - 最高适配：Android 16
+            - 安装包内含完整运行环境，首次启动自动解包，无需联网安装依赖
+
+            ### 使用
+            1. 安装 APK（需允许"安装未知来源应用"）
+            2. 打开后点「安装运行环境」
+            3. 点「一键启动」即启动 nginx
+            4. 「网站」里新建站点，「frpc 内网穿透」里一键导入配置文件

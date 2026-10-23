@@ -104,15 +104,35 @@ class MainActivity : AppCompatActivity() {
                 append("本机站点端口：")
                 append(ports.joinToString(", "))
                 append("\n")
-                append("手机内访问：http://127.0.0.1:${ports.first()}\n")
-                append("局域网访问：http://${android.net.Uri.encode("")}" )
+                append("手机内访问：http://127.0.0.1:${ports.first()}")
+                val lan = localIpv4()
+                if (lan != null) {
+                    append("\n局域网访问：http://$lan:${ports.first()}")
+                }
             } else {
                 append("尚未创建站点，点下方「网站」一键创建默认站点。")
+            }
+            if (cfg.frpcEnabled && cfg.frpServerAddr.isNotBlank()) {
+                append("\n穿透服务器：${cfg.frpServerAddr}:${cfg.frpServerPort}")
             }
         }
 
         btnStart.isEnabled = !nginxUp
         btnStop.isEnabled = nginxUp || frpcUp
+    }
+
+    /** 取本机局域网 IPv4（wlan0 优先），用于展示可被同网设备访问的地址。 */
+    private fun localIpv4(): String? = try {
+        java.net.NetworkInterface.getNetworkInterfaces().toList()
+            .filter { it.isUp && !it.isLoopback }
+            .sortedByDescending { it.name.startsWith("wlan") }
+            .asSequence()
+            .flatMap { it.inetAddresses.toList().asSequence() }
+            .filterIsInstance<java.net.Inet4Address>()
+            .firstOrNull { !it.isLoopbackAddress }
+            ?.hostAddress
+    } catch (e: Exception) {
+        null
     }
 
     private fun doInstall() {

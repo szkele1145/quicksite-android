@@ -35,6 +35,12 @@ echo "bootstrap: $(du -sh "$BS" | cut -f1)"
 # ---------- 3. 解包 nginx deb ----------
 python3 "$ROOT/scripts/deb_extract.py" "$DL/nginx_1.31.8_aarch64.deb" "$BS"
 
+# ---------- 3.5 node / npm / pm2 ----------
+python3 "$ROOT/scripts/install_node.py" "$DL" "$BS" || echo "node install failed"
+
+# ---------- 3.6 sh -> dash ----------
+[ -e "$BS/bin/sh" ] || cp "$BS/bin/dash" "$BS/bin/sh"
+
 # ---------- 4. frpc ----------
 python3 "$ROOT/scripts/tar_extract.py" "$DL/frp-android-arm64.tar.gz" "$OUT/frpc.bin" frpc
 

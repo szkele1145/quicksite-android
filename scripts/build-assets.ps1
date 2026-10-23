@@ -1,4 +1,4 @@
-# Build QuickSite assets (Windows): slim bootstrap + pre-installed nginx + frpc
+﻿# Build QuickSite assets (Windows): slim bootstrap + pre-installed nginx + frpc
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\build-assets.ps1
 $ErrorActionPreference = 'Stop'
 
@@ -41,6 +41,17 @@ Write-Output ("bootstrap after slim: {0:N1} MB" -f ($sz/1MB))
 # 3. nginx deb
 & python (Join-Path $PSScriptRoot 'deb_extract.py') (Join-Path $dl 'nginx_1.31.8_aarch64.deb') $bs
 if ($LASTEXITCODE -ne 0) { throw 'nginx deb extraction failed' }
+
+# 3.5 node / npm / pm2 + 依赖
+& python (Join-Path $PSScriptRoot 'install_node.py') $dl $bs
+if ($LASTEXITCODE -ne 0) { Write-Warning 'node 安装失败，pm2 功能将不可用' }
+
+# 3.6 补 sh -> bash 符号链接（bootstrap 未提供 sh）
+$shLink = Join-Path $bs 'bin\sh'
+if (-not (Test-Path $shLink)) {
+  Copy-Item (Join-Path $bs 'bin\dash') $shLink -Force
+  Write-Output '  已补 bin/sh'
+}
 
 # 4. frpc
 & python (Join-Path $PSScriptRoot 'tar_extract.py') (Join-Path $dl 'frp-android-arm64.tar.gz') (Join-Path $out 'frpc.bin') frpc

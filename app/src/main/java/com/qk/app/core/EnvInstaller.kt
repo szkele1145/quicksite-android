@@ -38,38 +38,46 @@ object EnvInstaller {
 
     private fun installInternal(ctx: Context, onProgress: (Progress) -> Unit): Boolean {
         val usr = Paths.usr(ctx)
-        val tmp = File(ctx.cacheDir, "bootstrap.zip")
-        val tmpOut = File(ctx.cacheDir, "bootstrap_extracted")
 
-        // ---- 1. 复制 assets 到缓存 ----
-        onProgress(Progress("准备文件", 5))
-        copyAsset(ctx, BOOTSTRAP_ASSET, tmp)
-
-        // ---- 2. 解包 + 前缀替换 ----
-        onProgress(Progress("解包运行环境", 15))
-        tmpOut.deleteRecursively()
-        var lastPct = 15
-        PrefixPatcher.unzipAndPatch(tmp, tmpOut) { msg ->
-            onProgress(Progress("解包运行环境", lastPct, msg))
-        }
-
-        // ---- 3. 移动到 usr/ ----
-        onProgress(Progress("安装运行环境", 70))
+        // ---- 1. 直接从 assets 流式解包到 usr/（不落中间 zip，省磁盘与 IO）----
+        onProgress(Progress("解包运行环境", 10))
         usr.mkdirs()
-        copyTree(tmpOut, usr)
-        tmpOut.deleteRecursively()
-        tmp.delete()
+        var files = 0
+        val destPath = usr.canonicalPath
+        ctx.assets.open(BOOTSTRAP_ASSET).use { raw ->
+            java.util.zip.ZipInputStream(raw.buffered()).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    val out = File(usr, entry.name)
+                    if (!out.canonicalPath.startsWith(destPath)) {
+                        throw SecurityException("非法 zip 条目: ${entry.name}")
+                    }
+                    if (entry.isDirectory) {
+                        out.mkdirs()
+                    } else {
+                        out.parentFile?.mkdirs()
+                        PrefixPatcher.writeEntriesPatched(zis, out)
+                        files++
+                        if (files % 300 == 0) {
+                            onProgress(Progress("解包运行环境", 10 + (files / 60).coerceAtMost(60), "已解包 $files 个文件"))
+                        }
+                    }
+                    entry = zis.nextEntry
+                }
+            }
+        }
+        Paths.log("EnvInstaller", "解包完成，共 $files 个文件")
 
-        // ---- 4. 符号链接 ----
-        onProgress(Progress("建立命令链接", 85))
+        // ---- 2. 符号链接 ----
+        onProgress(Progress("建立命令链接", 80))
         createSymlinks(ctx)
 
-        // ---- 5. frpc ----
-        onProgress(Progress("安装 frpc", 92))
+        // ---- 3. frpc ----
+        onProgress(Progress("安装 frpc", 88))
         installFrpc(ctx)
 
-        // ---- 6. 基础配置 ----
-        onProgress(Progress("写入默认配置", 97))
+        // ---- 4. 基础配置 ----
+        onProgress(Progress("写入默认配置", 95))
         setupDefaults(ctx)
 
         onProgress(Progress("完成", 100))

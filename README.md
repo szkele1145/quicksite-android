@@ -1,19 +1,29 @@
 # QuickSite 🚀
 
-**安卓秒开网站**——把手机变成一台 Web 服务器。内置 nginx、pm2、frpc，装完即用，不用连电脑、不用敲命令、不用联网装依赖。
+**安卓秒开网站**——把手机变成一台 Web 服务器。内置 nginx、Node.js、pm2、frpc，装完即用，不用连电脑、不用敲命令、不用联网装依赖。
 
 > 目标平台：Android 7.0 ~ Android 16（arm64-v8a）
+
+## 下载
+
+| 版本 | 体积 | 内容 |
+|------|------|------|
+| [**v1.1.0 Full**](https://github.com/szkele1145/quicksite-android/releases/download/v1.1.0/QuickSite-v1.1.0-full.apk) | 108 MB | nginx + Node.js 24 + npm + **pm2** + frpc（全离线） |
+| [v1.0.0 Lite](https://github.com/szkele1145/quicksite-android/releases/download/v1.0.0/QuickSite-v1.0.0.apk) | 40 MB | nginx + frpc（无 Node/pm2） |
+
+> 首次启动需解包到私有目录，请预留约 150 MB 空闲空间。
 
 ---
 
 ## 一分钟上手
 
 1. **装 APK**（允许「安装未知来源应用」）
-2. 打开 App → 点 **「安装运行环境」**（只需一次，约 1 分钟）
+2. 打开 App → 点 **「安装运行环境」**（只需一次，1~3 分钟）
 3. 点 **「一键启动」** → nginx 起来了
 4. 进 **「网站」** → 新建站点 → 浏览器访问 `http://127.0.0.1:8080`
 
 内网穿透：**「frpc 内网穿透」** → 选配置文件 或 粘贴内容 → 启动。
+Node 应用：**「Node 应用」** → 填入口脚本 → pm2 托管。
 
 ---
 
@@ -24,12 +34,25 @@
 | **一键启动** | nginx / frpc 启停，后台保活服务（前台通知 + WakeLock） |
 | **网站** | 静态站点 / 反向代理两种类型，端口自动分配，保存即热重载 |
 | **frpc** | 一键导入 `toml` / 旧版 `ini` 配置，自动转换 + 规范化 + 冲突检查 |
-| **Node 应用** | 用 pm2 托管 node 项目（启动 / 停止 / 看日志） |
+| **Node 应用** | 内置 Node.js + npm + pm2，托管 node 项目（启动 / 停止 / 看日志） |
 | **日志** | nginx access/error + frpc 日志汇总，可一键清空 |
 
 ---
 
+## 云端构建
+
+`.github/workflows/build.yml` 需要 Token 带 `workflow` 权限才能推送，因此模板放在 `ci/build.yml`。
+启用方式见 [ci/README.md](ci/README.md)（网页端粘贴即可，不需要换 Token）。
+
+---
+
 ## 技术要点
+
+### 0. 流式前缀替换（不吃内存）
+
+真实 bootstrap 里有 **666 个文件、10329 处** `com.termux`；node 单个二进制就有 44 MB。
+`PrefixPatcher` 对 >2 MB 的文件走 4 MB 窗口流式替换，解包时也是**边读 zip 边替换边写盘**，
+内存占用恒定，且不产生临时副本（省一半磁盘、少一遍 IO）。
 
 ### 1. 等长包名字节替换
 
@@ -40,7 +63,7 @@ termux bootstrap 里的二进制把 `/data/data/com.termux/files/usr` 硬编码�
 /data/data/com.qk.app/files/usr   →  31 字符   ✅ 等长
 ```
 
-于是可以在安装期对 338 个 ELF、130 处绝对路径做**等长字节替换**，无需重链接、无需改 ELF 结构。`Paths.kt` 里有 `require` 做等长断言，长度一旦不一致立刻崩溃。
+于是可以在安装期做**等长字节替换**，无需重链接、无需改 ELF 结构。`Paths.kt` 里有 `require` 做等长断言，长度一旦不一致立刻崩溃。
 
 ### 2. targetSdk = 28 的执行豁免
 
