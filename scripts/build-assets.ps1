@@ -31,7 +31,10 @@ foreach ($p in $prunes) {
   $t = Join-Path $bs $p
   if (Test-Path $t) { Remove-Item $t -Recurse -Force }
 }
-foreach ($l in @('libapt-pkg.so','libapt-private.so','libgnutls.so','libunbound.so','libp11-kit.so','libunistring.so','pkcs11')) {
+# 不要裁掉 apt / gnutls / p11-kit / unbound / unistring 等库：
+# 它们被 lib/apt/* 与 libgnutls-dane.so 依赖，删掉会在 lib/ 留下依赖断裂的 .so
+# （scripts/elf_audit.py 会检查出来）。
+foreach ($l in @('pkcs11')) {
   $t = Join-Path $bs "lib\$l"
   if (Test-Path $t) { Remove-Item $t -Recurse -Force }
 }

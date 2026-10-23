@@ -26,7 +26,8 @@ prune "$BS/libexec/termux/command-not-found"
 prune "$BS/var/log"
 prune "$BS/var/cache/apt"
 prune "$BS/etc/apt"
-for l in libapt-pkg.so libapt-private.so libgnutls.so libunbound.so libp11-kit.so libunistring.so pkcs11; do
+# 保留 apt/gnutls/p11-kit/unbound/unistring（被 lib/apt/* 与 libgnutls-dane.so 依赖）
+for l in pkcs11; do
   prune "$BS/lib/$l"
 done
 

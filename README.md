@@ -153,6 +153,38 @@ Workflow 会自装 JDK 17 + SDK 34、拉取 bootstrap/frp/nginx、构建并发�
 
 ---
 
+## 运行时完整性审计
+
+`scripts/elf_audit.py` 会解析 bootstrap 里每个 ELF 的 `PT_INTERP`、`DT_NEEDED`、
+`DT_RUNPATH`，把依赖闭包和实际提供的库对账。这是在没有真机的情况下，
+**最接近「能不能跑起来」的证据**。
+
+当前 v1.1.4 的实测结果：
+
+| 检查项 | 结果 |
+|---|---|
+| ELF 总数 / 架构 | 346 个，全部 `EM_AARCH64`（183） |
+| `PT_INTERP` | 205 个，唯一值 `/system/bin/linker64` |
+| `DT_RUNPATH` | 全部指向 `/data/data/com.termux/files/usr/lib`（等长替换后即我们的 lib） |
+| 含 `com.termux` 待替换的 ELF | 345 / 346（剩下那个是 `libc++_shared.so`，本就不需要前缀） |
+| `DT_NEEDED` 唯一项 | 57 个 |
+| 依赖供给 | zip 实体 `.so` 100 个 + 运行时符号链接 44 个（SONAME→版本化文件） |
+| 关键路径依赖 | **完整**：`libreadline.so.8`、`libncursesw.so.6`、`libz.so.1`、`liblzma.so.5`、`libbz2.so.1.0`、`libzstd.so.1` 均由符号链接提供 |
+| `frpc.bin` | `DT_NEEDED` 为空，仅依赖系统 linker，自包含 |
+
+`bash` 依赖 `libreadline.so.8`、17 个命令依赖 `libncursesw.so.6` ——
+这些 SONAME 在 zip 里只是**符号链接**（实体是 `libreadline.so.8.3` 之类），
+所以「符号链接能不能正确重建」直接决定 bash 能否启动。
+
+审计脚本也用于在构建期发现断裂依赖：早期版本裁掉了 `libgnutls` / `libapt-*`，
+导致 `lib/apt/*` 与 `libgnutls-dane.so` 依赖断裂，现已从裁剪列表移除。
+
+```powershell
+python scripts\elf_audit.py app\src\main\assets\bootstrap.zip
+```
+
+---
+
 ## frpc 配置导入
 
 支持两种格式，导入时自动解析并规范化：
