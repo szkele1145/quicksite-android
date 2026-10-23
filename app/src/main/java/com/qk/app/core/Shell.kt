@@ -18,7 +18,7 @@ object Env {
         val m = mutableMapOf(
             "PREFIX" to usr,
             "HOME" to home,
-            "PATH" to "$usr/bin:$usr/bin:/system/bin",
+            "PATH" to "$usr/bin:/system/bin",
             "TMPDIR" to "$usr/tmp",
             "SHELL" to "$usr/bin/bash",
             "TERM" to "xterm-256color",
@@ -26,7 +26,8 @@ object Env {
             "ANDROID_ROOT" to "/system",
             "ANDROID_DATA" to "/data",
             "EXTERNAL_STORAGE" to "/sdcard",
-            "PREFIX" to usr,
+            // ELF 的 RUNPATH 已被改写成我们的前缀，这里再加一层兜底
+            "LD_LIBRARY_PATH" to "$usr/lib",
             // dpkg 前缀改写后，让 apt/dpkg 认得我们的根目录
             "DPKG_ROOT" to usr,
             "QS_UNINSTALL" to "0",

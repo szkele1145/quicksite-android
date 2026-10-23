@@ -68,6 +68,12 @@ object EnvInstaller {
         }
         Paths.log("EnvInstaller", "解包完成，共 $files 个文件")
 
+        // ---- 1.5 权限修复（关键）----
+        // Java 的 ZipInputStream 解包不会还原 unix 权限位，所有文件默认是 rw-------，
+        // 直接执行 bin/bash 会 EACCES。这里统一按目录语义补权限。
+        onProgress(Progress("设置执行权限", 75))
+        fixPermissions(usr)
+
         // ---- 2. 符号链接 ----
         onProgress(Progress("建立命令链接", 80))
         createSymlinks(ctx)
@@ -83,6 +89,37 @@ object EnvInstaller {
         onProgress(Progress("完成", 100))
         Paths.stamp(ctx).writeText("v1")
         return true
+    }
+
+    /**
+     * 修复解包后文件的权限位。
+     *
+     * Java 解 zip 不会还原权限，全部是 0600；而 termux 环境里 bin/ 与 libexec/ 下
+     * 的每个文件都必须可执行，否则 `bash -lc` 直接 EACCES，整套运行环境不可用。
+     */
+    private fun fixPermissions(usr: File) {
+        val usrPath = usr.absolutePath
+        val execDirs = listOf("bin", "libexec", "libexec/termux", "libexec/termux-am")
+        var exec = 0
+        var plain = 0
+        usr.walkTopDown().forEach { f ->
+            if (!f.isFile) return@forEach
+            val rel = f.absolutePath.removePrefix(usrPath).trimStart(File.separatorChar)
+            val inExecDir = execDirs.any { rel.startsWith("$it${File.separatorChar}") } ||
+                !rel.contains(File.separatorChar) // usr/ 根下的脚本
+            try {
+                if (inExecDir) {
+                    OsChmod.chmod(f.absolutePath, 0x1ED)   // 0755
+                    exec++
+                } else {
+                    OsChmod.chmod(f.absolutePath, 0x1A4)   // 0644
+                    plain++
+                }
+            } catch (_: Exception) {
+                // 单个文件失败不影响整体
+            }
+        }
+        Paths.log("EnvInstaller", "权限设置完成：可执行 $exec 个，普通 $plain 个")
     }
 
     private fun copyAsset(ctx: Context, name: String, dest: File) {
@@ -107,39 +144,76 @@ object EnvInstaller {
     }
 
     /**
-     * termux bootstrap 用 SYMLINKS.txt 记录了 bin 下的软链接（如 coreutils -> /bin/true）。
-     * 格式为 `target<TAB>linkpath`（实际用 UTF-8 箭头字符）。
+     * 按 SYMLINKS.txt 重建符号链接。
+     *
+     * 文件格式是 **`<目标>←<链接路径>`**（U+2190 左箭头分隔），例如：
+     * ```
+     * coreutils←./bin/true          → bin/true 是指向 bin/coreutils 的链接
+     * xz←./bin/xzcat                → bin/xzcat 指向 bin/xz
+     * xzgrep.1.gz←./share/man/man1/xzegrep.1.gz
+     * ```
+     * 左侧不含 `/` 时是「相对链接所在目录」的名字，右侧带 `./` 前缀。
+     *
+     * 这些链接必须建：`ls`/`cp`/`true`/`printf` 等基础命令在 termux 里都是
+     * coreutils 多调用二进制的链接，缺了它 bash 脚本基本跑不起来。
      */
     private fun createSymlinks(ctx: Context) {
         val linksFile = File(Paths.usr(ctx), "SYMLINKS.txt")
         if (!linksFile.exists()) return
-        val usr = Paths.usr(ctx).absolutePath
+        val usr = Paths.usr(ctx)
+        val usrPath = usr.absolutePath
+        var created = 0
+        var skipped = 0
+
         for (line in linksFile.readLines()) {
             val t = line.trim()
             if (t.isEmpty()) continue
-            // 格式：`linkName←./bin/target`（U+2190 分隔）
             val arrow = t.indexOf('\u2190')
             if (arrow <= 0) continue
-            val linkName = t.substring(0, arrow).trim()
-            var target = t.substring(arrow + 1).trim()
-            if (linkName.isEmpty() || target.isEmpty()) continue
 
-            val linkFile = File(usr, "bin/$linkName")
-            if (linkFile.exists()) continue
+            val targetName = t.substring(0, arrow).trim().removePrefix("./")
+            var linkPath = t.substring(arrow + 1).trim().removePrefix("./")
+            if (targetName.isEmpty() || linkPath.isEmpty()) continue
 
-            target = target.removePrefix("./")
-            val absTarget = when {
-                target.startsWith("/bin/") -> "$usr$target"
-                target.startsWith("/") -> target
-                else -> "$usr/$target"
+            val linkFile = File(usr, linkPath)
+            // 链接所在目录
+            val linkDir = linkFile.parentFile ?: continue
+
+            // 目标：含 `/` 视为相对 usr 根；否则相对链接所在目录
+            val absTarget = if (targetName.contains('/')) {
+                File(usr, targetName).absolutePath
+            } else {
+                File(linkDir, targetName).absolutePath
+            }
+
+            // 目标不存在就不建（多半是已裁掉的 man/doc）
+            if (!File(absTarget).exists()) {
+                skipped++
+                continue
+            }
+            // 已存在同名实体文件（非链接）就保留，不覆盖
+            if (linkFile.exists() && !isSymlink(linkFile)) {
+                skipped++
+                continue
             }
             try {
+                linkFile.parentFile?.mkdirs()
+                if (isSymlink(linkFile)) linkFile.delete()
                 OsSymlink.symlink(absTarget, linkFile.absolutePath)
+                created++
             } catch (_: Exception) {
-                // 符号链接失败不致命：bash 仍可工作，只是少了部分别名
+                skipped++
             }
         }
+        Paths.log("EnvInstaller", "符号链接：创建 $created 个，跳过 $skipped 个")
         linksFile.delete()
+    }
+
+    /** 判断是否符号链接（Android 上 File.isSymlink 不可靠，用 canonical 对比）。 */
+    private fun isSymlink(f: File): Boolean = try {
+        f.canonicalPath != f.absolutePath
+    } catch (_: Exception) {
+        true
     }
 
     private fun installFrpc(ctx: Context) {
@@ -152,6 +226,28 @@ object EnvInstaller {
             out.setExecutable(true, false)
         } catch (e: Exception) {
             Paths.log("EnvInstaller", "frpc 安装失败: ${e.message}")
+        }
+    }
+
+    /** 首次安装时种一个默认站点（8080，静态），让用户开箱就有东西可看。 */
+    private fun seedDefaultSite(ctx: Context) {
+        try {
+            val cfg = AppConfig(ctx)
+            if (cfg.sites().isNotEmpty()) return
+
+            val site = NginxConf.Site(
+                name = "default",
+                type = NginxConf.Site.Type.STATIC,
+                port = 8080,
+                root = "var/www/default",
+                serverName = "localhost"
+            )
+            NginxConf.writeSite(ctx, site)
+            NginxConf.writeDefaultIndex(ctx, "default")
+            cfg.saveSites(listOf(site))
+            Paths.log("EnvInstaller", "已创建默认站点：8080")
+        } catch (e: Exception) {
+            Paths.log("EnvInstaller", "创建默认站点失败: ${e.message}")
         }
     }
 
@@ -168,6 +264,13 @@ object EnvInstaller {
         File(usr, "etc/nginx/sites-enabled").mkdirs()
         File(usr, "var/log/nginx").mkdirs()
         File(usr, "var/run/nginx").mkdirs()
+        // nginx 的临时目录（编译期写死在这些路径下，必须提前建好且可写）
+        listOf("client-body", "proxy", "fastcgi", "scgi", "uwsgi").forEach {
+            File(usr, "var/lib/nginx/$it").mkdirs()
+        }
+
+        // 首次安装自动建一个默认站点，保证「一键启动」后立刻有页面可看
+        seedDefaultSite(ctx)
 
         // bashrc
         val bashrc = File(usr, "etc/bash.bashrc")
@@ -213,5 +316,22 @@ object OsSymlink {
         val osClass = Class.forName("android.system.Os")
         val m = osClass.getMethod("symlink", String::class.java, String::class.java)
         m.invoke(null, target, linkPath)
+    }
+}
+
+/** android.system.Os.chmod 的安全封装（失败时退回 File.setExecutable） */
+object OsChmod {
+    fun chmod(path: String, mode: Int) {
+        try {
+            val osClass = Class.forName("android.system.Os")
+            val m = osClass.getMethod("chmod", String::class.java, Int::class.javaPrimitiveType)
+            m.invoke(null, path, mode)
+        } catch (_: Exception) {
+            val f = java.io.File(path)
+            val executable = (mode and 0x49) != 0
+            f.setReadable(true, false)
+            f.setWritable(true, true)
+            f.setExecutable(executable, false)
+        }
     }
 }

@@ -26,7 +26,7 @@ object NginxConf {
     }
 
     fun defaultMainConf(prefix: String): String = """
-        user 1000;
+        # 注意：不能写 user 指令——以应用 uid 运行时 nginx 无法切用户，只会报 warning
         worker_processes 1;
         error_log $prefix/var/log/nginx/error.log warn;
         pid $prefix/var/run/nginx/nginx.pid;
