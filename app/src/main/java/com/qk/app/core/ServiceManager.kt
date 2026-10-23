@@ -23,8 +23,15 @@ class ServiceManager(private val ctx: Context) {
     fun nginxRunning(): Boolean {
         val pidFile = File(Paths.nginxRun(ctx), "nginx.pid")
         if (!pidFile.exists()) return false
-        val pid = pidFile.readText().trim().toIntOrNull() ?: return false
-        return pidAlive(pid)
+        val pid = pidFile.readText().trim().toIntOrNull() ?: run {
+            runCatching { pidFile.delete() }
+            return false
+        }
+        val alive = pidAlive(pid)
+        if (!alive) {
+            runCatching { pidFile.delete() }
+        }
+        return alive
     }
 
     fun frpcRunning(): Boolean = procs[SVC_FRPC]?.let { it.isAlive } ?: false
