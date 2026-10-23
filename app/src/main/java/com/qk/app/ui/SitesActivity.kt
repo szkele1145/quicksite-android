@@ -198,7 +198,7 @@ class SitesActivity : AppCompatActivity() {
         val site = cfg.sites().getOrNull(position) ?: return
         lifecycleScope.launch {
             withContext(Dispatchers.IO) {
-                NginxConf.writeDefaultIndex(this@SitesActivity, site.name)
+                NginxConf.writeDefaultIndex(this@SitesActivity, site.name, if (site.type == NginxConf.Site.Type.STATIC) site.root else null)
             }
             toast("已生成默认首页")
         }

@@ -60,8 +60,6 @@ object NginxConf {
         if (site.serverName.isNotBlank() && site.serverName != "localhost") {
             sb.appendLine("    server_name ${site.serverName};")
         }
-        sb.appendLine("    root $prefix/var/www/${site.name};")
-        sb.appendLine("    index index.html index.htm;")
 
         if (site.extraHeaders.isNotEmpty()) {
             sb.appendLine()
@@ -74,6 +72,10 @@ object NginxConf {
         sb.appendLine("    location / {")
         when (site.type) {
             Site.Type.STATIC -> {
+                val rootPath = site.root?.takeIf { it.isNotBlank() } ?: "var/www/${site.name}"
+                val absRoot = if (rootPath.startsWith("/")) rootPath else "$prefix/$rootPath"
+                sb.appendLine("        root $absRoot;")
+                sb.appendLine("        index index.html index.htm;")
                 sb.appendLine("        try_files ${'$'}uri ${'$'}uri/ /index.html;")
             }
             Site.Type.PROXY -> {
@@ -113,8 +115,10 @@ object NginxConf {
             ?.map { it.name.removeSuffix(".conf") }?.sorted() ?: emptyList()
 
     /** 生成默认欢迎页（懒人配置：装完就有东西看） */
-    fun writeDefaultIndex(ctx: Context, siteName: String) {
-        val dir = File(Paths.usr(ctx), "var/www/$siteName")
+    fun writeDefaultIndex(ctx: Context, siteName: String, rootPath: String? = null) {
+        val prefix = Paths.usr(ctx).absolutePath
+        val rp = rootPath?.takeIf { it.isNotBlank() } ?: "var/www/$siteName"
+        val dir = File(if (rp.startsWith("/")) rp else "$prefix/$rp")
         dir.mkdirs()
         val index = File(dir, "index.html")
         if (!index.exists()) {
@@ -138,7 +142,7 @@ object NginxConf {
                     <div class="c">
                         <h1>🚀 QuickSite 已就绪</h1>
                         <p>你的手机现在就是一台 Web 服务器。</p>
-                        <p>站点目录：<code>var/www/${siteName}</code></p>
+                        <p>站点目录：<code>${dir.absolutePath}</code></p>
                         <p>访问本机：<code>http://127.0.0.1:${'$'}端口</code></p>
                     </div>
                 </body>
