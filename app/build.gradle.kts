@@ -10,11 +10,11 @@ android {
     defaultConfig {
         applicationId = "com.qk.app"
         minSdk = 24
-        // targetSdk 28: 保持 <29 以豁免 Android 10+ 的 W^X 执行限制（数据目录可执行），
-        // 同时 >=24 满足 Android 15/16 的最低安装 targetSdk 门槛 → 安卓 7~16 全可用
+        // targetSdk = 28：低于 29 才享有 Android 10+ 的「数据目录可执行」豁免（W^X），
+        // 同时 >= 24 满足 Android 15/16 的最低安装 targetSdk 门槛 → 覆盖 Android 7~16。
         targetSdk = 28
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 4
+        versionName = "1.1.2"
         ndk {
             // 只带 arm64：termux bootstrap 与 frpc 均为 aarch64
             abiFilters += listOf("arm64-v8a")
@@ -41,7 +41,6 @@ android {
     }
 
     lint {
-        // 发布流程不跑 lint（本地网络环境下 lint 依赖下载不稳定，CI 上另行校验）
         checkReleaseBuilds = false
         abortOnError = false
     }
@@ -59,7 +58,6 @@ android {
         }
     }
     androidResources {
-        // bootstrap.zip / frpc.bin 不做二次压缩，加快首次解包
         noCompress += listOf("zip", "bin", "so")
     }
 }

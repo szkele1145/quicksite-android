@@ -172,6 +172,10 @@ class MainActivity : AppCompatActivity() {
                 }
                 sb.toString()
             }
+            // 起来之后开启前台保活，避免系统回收
+            if (svc.nginxRunning() || svc.frpcRunning()) {
+                com.qk.app.core.KeepAliveService.start(this@MainActivity)
+            }
             statusText.text = msg.trim().ifBlank { "已启动" }
             refreshState()
         }
@@ -185,6 +189,7 @@ class MainActivity : AppCompatActivity() {
                 svc.stopNginx()
                 svc.stopFrpc()
             }
+            com.qk.app.core.KeepAliveService.stop(this@MainActivity)
             refreshState()
         }
     }
